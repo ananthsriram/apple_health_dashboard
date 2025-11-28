@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple Health Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Apple Health Dashboard</h1>
+            <p>Analyze your workout trends over time.</p>
+        </header>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading workout data...</p>
+        </div>
+
+        <div id="dashboard" class="hidden">
+            <div class="controls">
+                <label for="activitySelect">Activity:</label>
+                <select id="activitySelect"></select>
+
+                <label for="yearSelect">Year:</label>
+                <select id="yearSelect"></select>
+
+                <label for="chartTypeSelect">Chart Type:</label>
+                <select id="chartTypeSelect">
+                    <option value="line">Line Chart</option>
+                    <option value="bar">Bar Chart</option>
+                    <option value="radar">Radar Chart</option>
+                    <option value="pie">Pie Chart</option>
+                    <option value="doughnut">Doughnut Chart</option>
+                    <option value="polarArea">Polar Area Chart</option>
+                </select>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h2>Workout Count</h2>
+                    <div class="chart-container">
+                        <canvas id="countChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h2>Total Duration (min)</h2>
+                    <div class="chart-container">
+                        <canvas id="durationChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h2>Total Energy (kcal)</h2>
+                    <div class="chart-container">
+                        <canvas id="energyChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h2>Total Distance (km)</h2>
+                    <div class="chart-container">
+                        <canvas id="distanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+</body>
+
+</html>
