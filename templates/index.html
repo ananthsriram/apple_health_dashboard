@@ -1,68 +1,301 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apple Health Analysis</title>
+    <title>Apple Health Dashboard - Comprehensive Analytics</title>
+    <meta name="description"
+        content="Comprehensive Apple Health analytics dashboard with workout, sleep, steps, and heart rate tracking">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.1.0"></script>
+    <!-- DataTables for workout details table -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 </head>
 
 <body>
     <div class="container">
         <header>
-            <h1>Apple Health Dashboard</h1>
-            <p>Analyze your workout trends over time.</p>
+            <div class="header-content">
+                <div>
+                    <h1>🍎 Apple Health Dashboard</h1>
+                    <p>Comprehensive health analytics and insights</p>
+                </div>
+                <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark/light mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+
+            <!-- Date Range Filter -->
+            <div class="date-range-filter">
+                <div class="filter-group">
+                    <label for="startDate">📅 From:</label>
+                    <input type="date" id="startDate" class="date-input">
+                </div>
+                <div class="filter-group">
+                    <label for="endDate">📅 To:</label>
+                    <input type="date" id="endDate" class="date-input">
+                </div>
+                <button id="applyDateFilter" class="btn-filter">Apply Filter</button>
+                <button id="clearDateFilter" class="btn-filter btn-secondary">Clear</button>
+                <span id="dateRangeInfo" class="date-range-info"></span>
+            </div>
         </header>
 
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p>Loading workout data...</p>
+            <p>Loading your health data...</p>
         </div>
 
         <div id="dashboard" class="hidden">
-            <div class="controls">
-                <label for="activitySelect">Activity:</label>
-                <select id="activitySelect"></select>
+            <!-- Statistics Cards -->
+            <section class="stats-section">
+                <h2>📊 Summary Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">💪</div>
+                        <div class="stat-content">
+                            <h3 id="totalWorkouts">0</h3>
+                            <p>Total Workouts</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-content">
+                            <h3 id="totalDuration">0</h3>
+                            <p>Total Hours</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔥</div>
+                        <div class="stat-content">
+                            <h3 id="totalEnergy">0</h3>
+                            <p>Calories Burned</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📍</div>
+                        <div class="stat-content">
+                            <h3 id="totalDistance">0</h3>
+                            <p>Total Distance (km)</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📅</div>
+                        <div class="stat-content">
+                            <h3 id="avgPerWeek">0</h3>
+                            <p>Avg Workouts per Week</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📆</div>
+                        <div class="stat-content">
+                            <h3 id="avgPerMonth">0</h3>
+                            <p>Avg Workouts per Month</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-                <label for="yearSelect">Year:</label>
-                <select id="yearSelect"></select>
+            <!-- Personal Records -->
+            <section class="records-section">
+                <h2>🏆 Personal Records</h2>
+                <div class="records-grid">
+                    <div class="record-card">
+                        <h3>Longest Workout</h3>
+                        <p class="record-value" id="longestWorkout">--</p>
+                        <p class="record-detail" id="longestWorkoutDetail">--</p>
+                    </div>
+                    <div class="record-card">
+                        <h3>Most Active Month</h3>
+                        <p class="record-value" id="mostActiveMonth">--</p>
+                        <p class="record-detail" id="mostActiveMonthDetail">--</p>
+                    </div>
+                    <div class="record-card">
+                        <h3>Current Workout Streak</h3>
+                        <p class="record-value" id="currentStreak">0 days</p>
+                        <p class="record-detail">Keep it up!</p>
+                    </div>
+                    <div class="record-card">
+                        <h3>Longest Workout Streak</h3>
+                        <p class="record-value" id="longestStreak">0 days</p>
+                        <p class="record-detail">Personal best</p>
+                    </div>
+                </div>
+            </section>
 
-                <label for="chartTypeSelect">Chart Type:</label>
-                <select id="chartTypeSelect">
-                    <option value="line">Line Chart</option>
-                    <option value="bar">Bar Chart</option>
-                    <option value="radar">Radar Chart</option>
-                    <option value="pie">Pie Chart</option>
-                    <option value="doughnut">Doughnut Chart</option>
-                    <option value="polarArea">Polar Area Chart</option>
-                </select>
+            <!-- Navigation Tabs -->
+            <nav class="tabs">
+                <button class="tab-button active" data-tab="workouts">💪 Workouts</button>
+                <button class="tab-button" data-tab="sleep">😴 Sleep</button>
+                <button class="tab-button" data-tab="steps">👟 Steps</button>
+                <button class="tab-button" data-tab="heartrate">❤️ Heart Rate</button>
+            </nav>
+
+            <!-- Tab Content -->
+            <div class="tab-content active" id="workouts-tab">
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="activitySelect">Activity:</label>
+                        <select id="activitySelect"></select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="granularitySelect">Granularity:</label>
+                        <select id="granularitySelect">
+                            <option value="monthly">Monthly</option>
+                            <option value="daily">Daily</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="groupByCategory" style="cursor: pointer;">
+                            <input type="checkbox" id="groupByCategory"
+                                style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;">
+                            Group by Category
+                        </label>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="chartTypeSelect">Chart Type:</label>
+                        <select id="chartTypeSelect">
+                            <option value="line">Line Chart</option>
+                            <option value="bar">Bar Chart</option>
+                            <option value="radar">Radar Chart</option>
+                            <option value="pie">Pie Chart</option>
+                            <option value="doughnut">Doughnut Chart</option>
+                            <option value="polarArea">Polar Area Chart</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <button id="exportPNG" class="btn-export">📥 Export PNG</button>
+                        <button id="exportCSV" class="btn-export">📄 Export CSV</button>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Workout Count</h3>
+                        <div class="chart-container">
+                            <canvas id="countChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Total Distance (km)</h3>
+                        <div class="chart-container">
+                            <canvas id="distanceChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Total Duration (MIN)</h3>
+                        <div class="chart-container">
+                            <canvas id="durationChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Avg Duration (MIN)</h3>
+                        <div class="chart-container">
+                            <canvas id="avgDurationChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Total Energy (KCAL)</h3>
+                        <div class="chart-container">
+                            <canvas id="energyChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Avg Energy (KCAL)</h3>
+                        <div class="chart-container">
+                            <canvas id="avgEnergyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workout Details Table -->
+                <section class="table-section">
+                    <h2>📋 Workout Details</h2>
+                    <table id="workoutTable" class="display">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Activity</th>
+                                <th>Duration (min)</th>
+                                <th>Energy (kcal)</th>
+                                <th>Distance (km)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </section>
             </div>
 
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <h2>Workout Count</h2>
-                    <div class="chart-container">
-                        <canvas id="countChart"></canvas>
+            <div class="tab-content" id="sleep-tab">
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="sleepChartTypeSelect">Chart Type:</label>
+                        <select id="sleepChartTypeSelect">
+                            <option value="bar">Bar Chart</option>
+                            <option value="line">Line Chart</option>
+                            <option value="radar">Radar Chart</option>
+                            <option value="polarArea">Polar Area Chart</option>
+                        </select>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <h2>Total Duration (min)</h2>
-                    <div class="chart-container">
-                        <canvas id="durationChart"></canvas>
+                <div class="charts-grid">
+                    <div class="chart-card chart-card-large">
+                        <h3>Sleep Hours per Month</h3>
+                        <div class="chart-container">
+                            <canvas id="sleepChart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <h2>Total Energy (kcal)</h2>
-                    <div class="chart-container">
-                        <canvas id="energyChart"></canvas>
+            </div>
+
+            <div class="tab-content" id="steps-tab">
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="stepsChartTypeSelect">Chart Type:</label>
+                        <select id="stepsChartTypeSelect">
+                            <option value="line">Line Chart</option>
+                            <option value="bar">Bar Chart</option>
+                            <option value="radar">Radar Chart</option>
+                            <option value="polarArea">Polar Area Chart</option>
+                        </select>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <h2>Total Distance (km)</h2>
-                    <div class="chart-container">
-                        <canvas id="distanceChart"></canvas>
+                <div class="charts-grid">
+                    <div class="chart-card chart-card-large">
+                        <h3>Total Steps per Month</h3>
+                        <div class="chart-container">
+                            <canvas id="stepsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="heartrate-tab">
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="heartRateChartTypeSelect">Chart Type:</label>
+                        <select id="heartRateChartTypeSelect">
+                            <option value="line">Line Chart</option>
+                            <option value="bar">Bar Chart</option>
+                            <option value="radar">Radar Chart</option>
+                            <option value="polarArea">Polar Area Chart</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="charts-grid">
+                    <div class="chart-card chart-card-large">
+                        <h3>Average Heart Rate per Month</h3>
+                        <div class="chart-container">
+                            <canvas id="heartRateChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
