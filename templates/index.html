@@ -216,6 +216,45 @@
                     </div>
                 </div>
 
+                <!-- Workouts Summary Table -->
+                <section class="summary-section" style="margin-bottom: 30px;">
+                    <h2>📋 Workouts Summary</h2>
+                    <div class="summary-card"
+                        style="background: var(--card-bg); padding: 20px; border-radius: 18px; border: 1px solid var(--border-color);">
+                        <table id="summaryTable" style="width: 100%; text-align: left; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <th style="padding: 10px; color: var(--text-secondary);">Category</th>
+                                    <th style="padding: 10px; color: var(--text-secondary);">Count</th>
+                                    <th style="padding: 10px; color: var(--text-secondary);">Avg Duration (min)</th>
+                                    <th style="padding: 10px; color: var(--text-secondary);">Avg Energy (kcal)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <td style="padding: 12px 10px; font-weight: bold;">💪 Strength Training</td>
+                                    <td id="summaryStrengthCount" style="padding: 12px 10px;">--</td>
+                                    <td id="summaryStrengthDuration" style="padding: 12px 10px;">--</td>
+                                    <td id="summaryStrengthEnergy" style="padding: 12px 10px;">--</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <td style="padding: 12px 10px; font-weight: bold;">🏃 Cardio</td>
+                                    <td id="summaryCardioCount" style="padding: 12px 10px;">--</td>
+                                    <td id="summaryCardioDuration" style="padding: 12px 10px;">--</td>
+                                    <td id="summaryCardioEnergy" style="padding: 12px 10px;">--</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 12px 10px; font-weight: bold; color: var(--accent-blue);">Total
+                                    </td>
+                                    <td id="summaryTotalCount" style="padding: 12px 10px; font-weight: bold;">--</td>
+                                    <td id="summaryTotalDuration" style="padding: 12px 10px; font-weight: bold;">--</td>
+                                    <td id="summaryTotalEnergy" style="padding: 12px 10px; font-weight: bold;">--</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
                 <!-- Workout Details Table -->
                 <section class="table-section">
                     <h2>📋 Workout Details</h2>
@@ -259,6 +298,14 @@
             <div class="tab-content" id="steps-tab">
                 <div class="controls">
                     <div class="control-group">
+                        <label for="stepsGranularitySelect">Granularity:</label>
+                        <select id="stepsGranularitySelect">
+                            <option value="monthly">Monthly</option>
+                            <option value="daily">Daily</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
                         <label for="stepsChartTypeSelect">Chart Type:</label>
                         <select id="stepsChartTypeSelect">
                             <option value="line">Line Chart</option>
@@ -266,6 +313,14 @@
                             <option value="radar">Radar Chart</option>
                             <option value="polarArea">Polar Area Chart</option>
                         </select>
+                    </div>
+
+                    <!-- Average Display Component -->
+                    <div class="metric-highlight"
+                        style="margin-left: auto; background: var(--card-bg); padding: 5px 15px; border-radius: 10px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 0.9em; color: var(--text-secondary);">Avg Daily Steps:</span>
+                        <span id="avgDailyStepsDisplay"
+                            style="font-size: 1.2em; font-weight: bold; color: var(--accent-green);">--</span>
                     </div>
                 </div>
                 <div class="charts-grid">

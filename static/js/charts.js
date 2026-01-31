@@ -12,7 +12,7 @@ let metricData = {
 let tabState = {
     workouts: { chartType: 'line', granularity: 'monthly', groupByCategory: false },
     sleep: { chartType: 'bar' },
-    steps: { chartType: 'line' },
+    steps: { chartType: 'line', granularity: 'monthly' },
     heartrate: { chartType: 'line' }
 };
 let charts = {};
@@ -120,6 +120,11 @@ function initializeEventListeners() {
     });
 
     // Steps filters
+    document.getElementById('stepsGranularitySelect').addEventListener('change', (e) => {
+        tabState.steps.granularity = e.target.value;
+        loadStepsData();
+    });
+
     document.getElementById('stepsChartTypeSelect').addEventListener('change', (e) => {
         tabState.steps.chartType = e.target.value;
         renderStepsChart();
@@ -521,6 +526,7 @@ function renderSleepChart() {
 async function loadStepsData() {
     try {
         const params = new URLSearchParams();
+        params.append('granularity', tabState.steps.granularity);
         if (dateRangeFilter.startDate) params.append('start_date', dateRangeFilter.startDate);
         if (dateRangeFilter.endDate) params.append('end_date', dateRangeFilter.endDate);
 
@@ -535,6 +541,53 @@ async function loadStepsData() {
 function renderStepsChart() {
     if (!metricData.steps || metricData.steps.length === 0) return;
     const flattened = flattenMetricData(metricData.steps, ['total_steps']);
+
+    // Calculate Average Daily Steps
+    let totalSteps = 0;
+    flattened.datasets.total_steps.forEach(val => totalSteps += val);
+
+    let numberOfDays = 1;
+
+    if (dateRangeFilter.startDate && dateRangeFilter.endDate) {
+        // Calculate days between start and end date
+        const start = new Date(dateRangeFilter.startDate);
+        const end = new Date(dateRangeFilter.endDate);
+        const diffTime = Math.abs(end - start);
+        numberOfDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    } else {
+        // Estimate based on data range if available, or just fallback (though usually dashboard sets a default 1 year)
+        // For monthly view, we might have 12 points, so approx 365 days?
+        // Better to use the actual dates from data if no filter
+        // But for safety, if no filter, let's assume it covers the range of years present
+        // Actually, initializeDateRangeDefaults sets a default filter, so we should rely on that or the data density.
+
+        // If Granularity is daily, number of points = number of days (mostly)
+        if (tabState.steps.granularity === 'daily') {
+            numberOfDays = flattened.labels.length;
+        } else {
+            // For monthly, it's harder to guess exact days without date filter.
+            // But valid use case is "All Time".
+            // Let's try to parse first and last label if they contain year
+            // Or better, just use the filter dates if they strictly exist.
+            // If "All Time" (no filter), we can't easily get exact days from simplistic flattened data.
+            // Let's assume the user almost always has a default filter of 1 year.
+            // If not, we'll try to use the count of daily data if we had it, but we might not.
+
+            // Simple fallback: if data has start/end dates embedded, use them.
+            // Our aggregated data has year/month.
+            // Let's stick to: if filter exists, use filter. If not, use approx days based on months * 30.4.
+            if (flattened.labels.length > 0) {
+                numberOfDays = flattened.labels.length * 30.44;
+            }
+        }
+    }
+
+    // Sanity check
+    if (numberOfDays < 1) numberOfDays = 1;
+
+    const avgDailySteps = Math.round(totalSteps / numberOfDays);
+    document.getElementById('avgDailyStepsDisplay').textContent = avgDailySteps.toLocaleString();
+
     createOrUpdateChart('steps', 'stepsChart', flattened.labels, flattened.datasets.total_steps, 'Steps', '#30d158', tabState.steps.chartType);
 }
 
@@ -609,9 +662,77 @@ async function loadWorkoutDetails(activity) {
             ],
             pageLength: 25, order: [[0, 'desc']], responsive: true
         });
+
+        // Update Summary Table
+        updateWorkoutsSummary(workoutDetailsData);
+
     } catch (error) {
         console.error('Error loading workout details:', error);
     }
+}
+
+// Helper: Categorize Activity (Frontend version matching backend)
+function categorizeActivity(activityName) {
+    if (!activityName) return 'Cardio';
+    const strengthKeywords = ['strength', 'core', 'bodyweight', 'yoga', 'mindandbody', 'resistance'];
+    const lowerName = activityName.toLowerCase();
+    for (const kw of strengthKeywords) {
+        if (lowerName.includes(kw)) return 'Strength Training';
+    }
+    return 'Cardio';
+}
+
+function updateWorkoutsSummary(data) {
+    const validData = data || []; // Handle null/undefined data
+
+    let stats = {
+        strength: { count: 0, duration: 0, energy: 0 },
+        cardio: { count: 0, duration: 0, energy: 0 },
+        total: { count: 0, duration: 0, energy: 0 }
+    };
+
+    validData.forEach(workout => {
+        const category = categorizeActivity(workout.activity);
+
+        // Update specific category
+        if (category === 'Strength Training') {
+            stats.strength.count++;
+            stats.strength.duration += parseFloat(workout.duration || 0);
+            stats.strength.energy += parseFloat(workout.energy || 0);
+        } else {
+            stats.cardio.count++;
+            stats.cardio.duration += parseFloat(workout.duration || 0);
+            stats.cardio.energy += parseFloat(workout.energy || 0);
+        }
+
+        // Update totals
+        stats.total.count++;
+        stats.total.duration += parseFloat(workout.duration || 0);
+        stats.total.energy += parseFloat(workout.energy || 0);
+    });
+
+    // Helper to calc avg and set text
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    const calcAvg = (sum, count) => count > 0 ? (sum / count).toFixed(1) : '0';
+
+    // Strength
+    set('summaryStrengthCount', stats.strength.count);
+    set('summaryStrengthDuration', calcAvg(stats.strength.duration, stats.strength.count));
+    set('summaryStrengthEnergy', calcAvg(stats.strength.energy, stats.strength.count));
+
+    // Cardio
+    set('summaryCardioCount', stats.cardio.count);
+    set('summaryCardioDuration', calcAvg(stats.cardio.duration, stats.cardio.count));
+    set('summaryCardioEnergy', calcAvg(stats.cardio.energy, stats.cardio.count));
+
+    // Total
+    set('summaryTotalCount', stats.total.count);
+    set('summaryTotalDuration', calcAvg(stats.total.duration, stats.total.count));
+    set('summaryTotalEnergy', calcAvg(stats.total.energy, stats.total.count));
 }
 
 // Export Functions

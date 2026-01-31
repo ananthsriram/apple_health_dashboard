@@ -66,11 +66,12 @@ def safe_float(value, default=0.0):
     except (ValueError, IndexError):
         return default
 
-def aggregate_metric_by_date(csv_path, date_col, val_col, start_date_str, end_date_str, dataset_name):
-    """Helper to aggregate CSV data by month with date range filtering"""
+def aggregate_metric_by_date(csv_path, date_col, val_col, start_date_str, end_date_str, dataset_name, granularity='monthly'):
+    """Helper to aggregate CSV data by month or day with date range filtering"""
     start_date = parse_date(start_date_str)
     end_date = parse_date(end_date_str)
     
+    # Structure: all_data[year][label] += value
     all_data = defaultdict(lambda: defaultdict(float))
     
     if not os.path.exists(csv_path):
@@ -88,12 +89,40 @@ def aggregate_metric_by_date(csv_path, date_col, val_col, start_date_str, end_da
                 if end_date and dt > end_date: continue
                 
                 year = dt.year
-                month = dt.strftime('%B')
-                all_data[year][month] += safe_float(row.get(val_col, 0))
+                
+                if granularity == 'daily':
+                    label = dt.strftime('%Y-%m-%d')
+                else:
+                    label = dt.strftime('%B')
+                    
+                all_data[year][label] += safe_float(row.get(val_col, 0))
             except:
                 continue
-                
-    return format_monthly_data(all_data, dataset_name)
+    
+    # Format results
+    formatted_result = []
+    month_order = ['January', 'February', 'March', 'April', 'May', 'June', 
+                  'July', 'August', 'September', 'October', 'November', 'December']
+                  
+    for year in sorted(all_data.keys()):
+        year_data = all_data[year]
+        
+        if granularity == 'daily':
+            sorted_labels = sorted(year_data.keys())
+        else:
+            sorted_labels = [m for m in month_order if m in year_data]
+            
+        values = [year_data[lbl] for lbl in sorted_labels]
+        
+        formatted_result.append({
+            'year': year,
+            'labels': sorted_labels,
+            'datasets': {
+                dataset_name: values
+            }
+        })
+        
+    return formatted_result
 
 def aggregate_heart_rate_by_date(csv_path, start_date_str, end_date_str):
     """Special helper for heart rate aggregation"""
@@ -347,23 +376,23 @@ def get_sleep_data():
 
 @app.route('/api/steps')
 def get_steps_data():
-    """Get steps data with date filtering"""
+    """Get steps data with date filtering and granularity"""
     start_date_str = request.args.get('start_date', '')
     end_date_str = request.args.get('end_date', '')
+    granularity = request.args.get('granularity', 'monthly')
     
+    csv_path = os.path.join(PROCESSED_DIR, 'steps', 'steps.csv')
+    
+    # If daily or filtered, stick to CSV aggregation for consistency
+    if os.path.exists(csv_path) and (granularity == 'daily' or start_date_str or end_date_str):
+        return jsonify(aggregate_metric_by_date(csv_path, 'startDate', 'value', start_date_str, end_date_str, 'total_steps', granularity))
+
     json_path = os.path.join(PROCESSED_DIR, 'steps', 'aggregated.json')
     if not os.path.exists(json_path):
         return jsonify([])
         
     with open(json_path, 'r') as f:
         data = json.load(f)
-        
-    if not (start_date_str or end_date_str):
-        return jsonify(data)
-        
-    csv_path = os.path.join(PROCESSED_DIR, 'steps', 'steps.csv')
-    if os.path.exists(csv_path):
-        return jsonify(aggregate_metric_by_date(csv_path, 'startDate', 'value', start_date_str, end_date_str, 'total_steps'))
         
     return jsonify(data)
 
